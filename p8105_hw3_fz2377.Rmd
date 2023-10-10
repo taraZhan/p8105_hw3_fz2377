@@ -1,0 +1,195 @@
+---
+title: "p8105_hw3_fz2377"
+author: "Tara Zhan"
+date: "2023-10-09"
+output: github_document
+---
+```{r include=FALSE}
+library(tidyverse)
+library(patchwork)
+library(ggridges)
+library(ggplot2)
+library(dplyr)
+library(knitr)
+library(gt)
+```
+
+### Problem 1
+```{r include=FALSE}
+library(p8105.datasets)
+data("instacart")
+```
+```{r eval=FALSE}
+total_aisles <- length(unique(instacart$aisle))
+popular_aisles <- instacart |>
+  group_by(aisle) |>
+  summarise(item_count = n()) |>
+  arrange(-item_count)
+```
+There are total of 134 aisles in this dataset, and "fresh vegetables" aisle is the most items ordered from. 
+```{r}
+filtered_aisles <- instacart |>
+  group_by(aisle) |>
+  summarise(item_count = n()) |>
+  filter(item_count > 10000) |>
+  arrange(item_count)
+ggplot(data = filtered_aisles, aes(x = aisle, y = item_count)) +
+  geom_col() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(title = "Items Ordered from Each Aisle",
+       x = "Aisle",
+       y = "Number of Items Ordered")
+```
+```{r, message=FALSE, warning=FALSE}
+selected_aisles <- instacart |>
+  filter(aisle==c("baking ingredients", "dog food care", "packaged vegetables fruits")) |>
+  group_by(aisle, product_name) |>
+  summarise(order_count = n()) |>
+  arrange(aisle, -order_count) |>
+  slice_head(n = 3)
+selected_aisles |> gt() |>
+  tab_header(title = "Top 3 Items in Selected Aisles") |>
+  cols_label(
+    aisle = "Aisle",
+    product_name = "Product Name",
+    order_count = "Order Count"
+  )
+```
+```{r, warning=FALSE, message=FALSE}
+selected_items <- instacart |>
+  filter(product_name %in% c("Pink Lady Apples", "Coffee Ice Cream")) |>
+  group_by(product_name, order_dow) |>
+  summarise(mean_hour = mean(order_hour_of_day), .groups = "drop") |>
+  pivot_wider(names_from = product_name, values_from = mean_hour) |>
+  mutate(order_dow = factor(order_dow,
+                            labels = c("Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday")))
+selected_items |> gt() |>
+  tab_header(title = "Mean Order Hour for Selected Items") |>
+  cols_label(
+    order_dow = "Day of Week",
+    `Pink Lady Apples` = "Pink Lady Apples (Mean Hour)",
+    `Coffee Ice Cream` = "Coffee Ice Cream (Mean Hour)"
+  ) |>
+  fmt_number(
+    columns = vars(`Pink Lady Apples`, `Coffee Ice Cream`),
+    decimals = 2
+  )
+```
+
+### Problem 2
+```{r include=FALSE}
+library(p8105.datasets)
+data("brfss_smart2010")
+```
+
+```{r}
+cleaned_brfss <- brfss_smart2010 |>
+  janitor::clean_names() |>
+  filter(
+    topic == "Overall Health", 
+    response %in% c("Excellent", "Very Good", "Good", "Fair", "Poor")
+    ) |>
+  mutate(
+    response = factor(response, levels = c("Poor", "Fair", "Good", "Very Good", "Excellent"))
+  )
+```
+
+```{r}
+states_observed <- cleaned_brfss |>
+  group_by(year, locationabbr) |>
+  summarise(locations_count = n_distinct(locationdesc), .groups = "drop") |>
+  filter(locations_count >= 7)|>
+  arrange(desc(locations_count))
+#in 2002
+states_2002 <- filter(states_observed, year == 2002)
+print.data.frame(states_2002)
+#in 2010
+states_2010 <- filter(states_observed, year == 2010)
+print.data.frame(states_2010)
+```
+In 2002, PA, MA, NJ, CT, FL, NC (total of 6 states) were observed at 7 or more locations. In 2010, total of 14 states were observed at 7 or more locations, including FL, NJ, TX, CA, MD, NC, NE, WA, MA, NY, OH, CO, PA, SC. 
+```{r}
+excellent_responses <- cleaned_brfss |>
+  filter(response == "Excellent") |>
+  group_by(year, locationabbr) |>
+  summarise(average_value = mean(data_value, na.rm = TRUE), .groups = "drop")
+ggplot(excellent_responses, aes(x = year, y = average_value, group = locationabbr, color = locationabbr)) +
+  geom_line() +
+  labs(title = "Average Value of 'Excellent' Responses Over Time", x = "Year", y = "Average Value") +
+  theme_minimal()
+```
+
+```{r}
+ny_data <- cleaned_brfss |>
+  filter(locationabbr == "NY", year %in% c(2006, 2010))
+ggplot(ny_data, aes(x = response, y = data_value, fill = response)) +
+  geom_boxplot() + 
+  facet_wrap(~year, scales = "free_x") + 
+  scale_fill_brewer(palette = "Set3", name = "Response Level") +
+  labs(
+    title = "Distribution of data_value for Responses (2006 & 2010) in NY",
+    x = "Response",
+    y = "Data Value"
+  ) +
+  theme_minimal() +
+  theme(legend.position = "right")
+```
+
+### Problem 3
+```{r}
+#Load, tidy, merge, organize datasets
+covar <- read_csv("nhanes_covar.csv", skip = 4) |>
+  janitor::clean_names() |>
+  mutate(
+      sex = recode(sex, "1" = "male", "2" = "female"),
+      education = recode(education, "1" = "Less than high school", "2" = "High school equivalent", "3" = "More than high school")
+      ) |>
+  mutate(
+    sex = factor(sex), 
+    education = factor(education)
+    )
+clean_covar <- covar |>
+  filter(age >= 21) |>
+  drop_na()
+accel <- read_csv("nhanes_accel.csv") |>
+  janitor::clean_names() 
+merged_data <- merge(clean_covar, accel, by = "seqn")
+```
+
+```{r}
+#Table of the number of men and women in each education category
+gender_edu <- merged_data |>
+  group_by(sex, education) |>
+  summarise(count = n(), .groups = "drop") |>
+  pivot_wider(names_from = sex, values_from = count)
+#Visualization of Age Distribution
+ggplot(merged_data, aes(x = education, y = age, fill = sex)) +
+  geom_boxplot() +
+  labs(title = "Age Distribution by Gender and Education",
+       x = "Education Level",
+       y = "Age") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+```{r}
+new_merged <- merged_data |>
+  mutate(
+    total_activity = rowSums(across(min1:min45), na.rm = TRUE)
+    )
+ggplot(new_merged, aes(x = age, y = total_activity, color = sex)) +
+  geom_point(alpha = .5) +
+  facet_wrap(~education) +
+  geom_smooth() +
+  labs(title = "Total Activity by Age, Gender, and Education")
+```
+
+```{r}
+activity_data <- merged_data |>
+  pivot_longer(cols = starts_with("min"), names_to = "minute", values_to = "activity")
+ggplot(activity_data, aes(x = minute, y = activity, color = sex)) +
+  geom_line() +
+  facet_wrap(~education) +
+  labs(title = "24-Hour Activity by Education and Gender")
+```
+

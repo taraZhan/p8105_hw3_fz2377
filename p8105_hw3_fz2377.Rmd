@@ -12,7 +12,6 @@ library(ggplot2)
 library(dplyr)
 library(knitr)
 library(gt)
-library(webshot)
 ```
 
 ### Problem 1
@@ -27,7 +26,7 @@ popular_aisles <- instacart |>
   summarise(item_count = n()) |>
   arrange(-item_count)
 ```
-There are total of 134 aisles in this dataset, and "fresh vegetables" aisle is the most items ordered from. 
+There are total of 134 aisles in this dataset, and "fresh vegetables" aisle is the most items ordered from.
 ```{r}
 filtered_aisles <- instacart |>
   group_by(aisle) |>
@@ -44,18 +43,14 @@ ggplot(data = filtered_aisles, aes(x = aisle, y = item_count)) +
 This plot displays the number of items ordered in each aisle that with more than 10000 items ordered, among all, fresh fruits and fresh vegetables have the most orders. 
 ```{r, message=FALSE, warning=FALSE}
 selected_aisles <- instacart |>
-  filter(aisle==c("baking ingredients", "dog food care", "packaged vegetables fruits")) |>
+  filter(aisle == "baking ingredients" | aisle == "dog food care" | aisle == "packaged vegetables fruits") |>
   group_by(aisle, product_name) |>
   summarise(order_count = n(), .groups = "drop") |>
   arrange(aisle, -order_count) |>
-  slice_head(n = 3)
-selected_aisles |> gt() |>
-  tab_header(title = "Top 3 Items in Selected Aisles") |>
-  cols_label(
-    aisle = "Aisle",
-    product_name = "Product Name",
-    order_count = "Order Count"
-  )
+  filter(min_rank(desc(order_count)) < 4)
+kable(selected_aisles, 
+      title = "Top 3 Items in Selected Aisles", 
+      col.names = c("Aisle", "Product Name", "Order Count"))
 ```
 This table shows the the number of times each item is ordered in three most popular items from three aisles (“baking ingredients”, “dog food care”, and “packaged vegetables fruits”).
 ```{r, warning=FALSE, message=FALSE}
@@ -66,17 +61,10 @@ selected_items <- instacart |>
   pivot_wider(names_from = product_name, values_from = mean_hour) |>
   mutate(order_dow = factor(order_dow,
                             labels = c("Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday")))
-selected_items |> gt() |>
-  tab_header(title = "Mean Order Hour for Selected Items") |>
-  cols_label(
-    order_dow = "Day of Week",
-    `Pink Lady Apples` = "Pink Lady Apples (Mean Hour)",
-    `Coffee Ice Cream` = "Coffee Ice Cream (Mean Hour)"
-  ) |>
-  fmt_number(
-    columns = vars(`Pink Lady Apples`, `Coffee Ice Cream`),
-    decimals = 2
-  )
+selected_items |> 
+  kable(format = "markdown", 
+        col.names = c("Day of Week", "Pink Lady Apples (Mean Hour)", "Coffee Ice Cream (Mean Hour)"),
+        title = "Mean Order Hour for Selected Items") 
 ```
 This table shows the mean hour of the day at which Pink Lady Apples and Coffee Ice Cream are ordered throughout a week. 
 
@@ -103,20 +91,14 @@ states_observed <- cleaned_brfss |>
   arrange(desc(locations_count))
 #in 2002
 states_2002 <- filter(states_observed, year == 2002) 
-states_2002 |> gt() |>
-  tab_header(title = "States that observed at 7 or more locations in 2002") |>
-  cols_label(
-    locationabbr = "States",
-    locations_count = "Locations Count"
-  )
+kable(states_2002, 
+      caption = "States that observed at 7 or more locations in 2002", 
+      col.names = c("Year", "State", "Locations Count"))
 #in 2010
 states_2010 <- filter(states_observed, year == 2010)
-states_2010 |> gt() |>
-  tab_header(title = "States that observed at 7 or more locations in 2010") |>
-  cols_label(
-    locationabbr = "States",
-    locations_count = "Locations Count"
-  )
+kable(states_2010, 
+      caption = "States that observed at 7 or more locations in 2010", 
+      col.names = c("Year", "State", "Locations Count"))
 ```
 In 2002, PA, MA, NJ, CT, FL, NC (total of 6 states) were observed at 7 or more locations. In 2010, total of 14 states were observed at 7 or more locations, including FL, NJ, TX, CA, MD, NC, NE, WA, MA, NY, OH, CO, PA, SC. 
 ```{r}
@@ -174,13 +156,9 @@ gender_edu <- merged_data |>
   group_by(sex, education) |>
   summarise(count = n(), .groups = "drop") |>
   pivot_wider(names_from = sex, values_from = count)
-gender_edu |> gt() |>
-  tab_header(title = "Number of men and women in each education levels") |>
-  cols_label(
-    education = "Education levels",
-    female = "Number of female", 
-    male = "Number of male"
-  )
+kable(gender_edu, 
+      caption = "Number of men and women in each education levels",
+      col.names = c("Education Level", "Number of Female", "Number of Male"))
 #Visualization of Age Distribution
 ggplot(merged_data, aes(x = education, y = age, fill = sex)) +
   geom_boxplot() +

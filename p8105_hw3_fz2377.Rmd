@@ -40,6 +40,7 @@ ggplot(data = filtered_aisles, aes(x = aisle, y = item_count)) +
        x = "Aisle",
        y = "Number of Items Ordered")
 ```
+This plot displays the number of items ordered in each aisle that with more than 10000 items ordered, among all, fresh fruits and fresh vegetables have the most orders. 
 ```{r, message=FALSE, warning=FALSE}
 selected_aisles <- instacart |>
   filter(aisle==c("baking ingredients", "dog food care", "packaged vegetables fruits")) |>
@@ -55,6 +56,7 @@ selected_aisles |> gt() |>
     order_count = "Order Count"
   )
 ```
+This table shows the the number of times each item is ordered in three most popular items from three aisles (“baking ingredients”, “dog food care”, and “packaged vegetables fruits”).
 ```{r, warning=FALSE, message=FALSE}
 selected_items <- instacart |>
   filter(product_name %in% c("Pink Lady Apples", "Coffee Ice Cream")) |>
@@ -75,37 +77,45 @@ selected_items |> gt() |>
     decimals = 2
   )
 ```
+This table shows the mean hour of the day at which Pink Lady Apples and Coffee Ice Cream are ordered throughout a week. 
 
 ### Problem 2
-```{r include=FALSE}
+```{r message=FALSE, warning=FALSE, echo=TRUE}
 library(p8105.datasets)
 data("brfss_smart2010")
-```
-
-```{r}
 cleaned_brfss <- brfss_smart2010 |>
   janitor::clean_names() |>
   filter(
     topic == "Overall Health", 
-    response %in% c("Excellent", "Very Good", "Good", "Fair", "Poor")
+    response %in% c("Excellent", "Very good", "Good", "Fair", "Poor")
     ) |>
   mutate(
-    response = factor(response, levels = c("Poor", "Fair", "Good", "Very Good", "Excellent"))
+    response = factor(response, levels = c("Poor", "Fair", "Good", "Very good", "Excellent"))
   )
 ```
 
-```{r}
+```{r message=FALSE, warning=FALSE}
 states_observed <- cleaned_brfss |>
   group_by(year, locationabbr) |>
   summarise(locations_count = n_distinct(locationdesc), .groups = "drop") |>
   filter(locations_count >= 7)|>
   arrange(desc(locations_count))
 #in 2002
-states_2002 <- filter(states_observed, year == 2002)
-print.data.frame(states_2002)
+states_2002 <- filter(states_observed, year == 2002) 
+states_2002 |> gt() |>
+  tab_header(title = "States that observed at 7 or more locations in 2002") |>
+  cols_label(
+    locationabbr = "States",
+    locations_count = "Locations Count"
+  )
 #in 2010
 states_2010 <- filter(states_observed, year == 2010)
-print.data.frame(states_2010)
+states_2010 |> gt() |>
+  tab_header(title = "States that observed at 7 or more locations in 2010") |>
+  cols_label(
+    locationabbr = "States",
+    locations_count = "Locations Count"
+  )
 ```
 In 2002, PA, MA, NJ, CT, FL, NC (total of 6 states) were observed at 7 or more locations. In 2010, total of 14 states were observed at 7 or more locations, including FL, NJ, TX, CA, MD, NC, NE, WA, MA, NY, OH, CO, PA, SC. 
 ```{r}
@@ -118,7 +128,7 @@ ggplot(excellent_responses, aes(x = year, y = average_value, group = locationabb
   labs(title = "Average Value of 'Excellent' Responses Over Time", x = "Year", y = "Average Value") +
   theme_minimal()
 ```
-
+This “spaghetti” plot contains only "Excellent" responses, years, states, and the average values across locations within a state.
 ```{r}
 ny_data <- cleaned_brfss |>
   filter(locationabbr == "NY", year %in% c(2006, 2010))
@@ -134,9 +144,10 @@ ggplot(ny_data, aes(x = response, y = data_value, fill = response)) +
   theme_minimal() +
   theme(legend.position = "right")
 ```
+This two-panel plot shows the distribution of 'data_value' for four levels of responses in years 2006 and year 2010, among locations in NY State only. Year 2010 has an overall high data values than year 2006 in all responses. 
 
 ### Problem 3
-```{r}
+```{r message=FALSE, warning=FALSE}
 #Load, tidy, merge, organize datasets
 covar <- read_csv("nhanes_covar.csv", skip = 4) |>
   janitor::clean_names() |>
@@ -155,13 +166,20 @@ accel <- read_csv("nhanes_accel.csv") |>
   janitor::clean_names() 
 merged_data <- merge(clean_covar, accel, by = "seqn")
 ```
-
+The "merged_data" dataset includes all variables from both 'accel' and 'covar' which merged by "SEQN" number; no data of participants less than age of 21; no missing demographic data; and all numeric values changed to meaningful factors. 
 ```{r}
 #Table of the number of men and women in each education category
 gender_edu <- merged_data |>
   group_by(sex, education) |>
   summarise(count = n(), .groups = "drop") |>
   pivot_wider(names_from = sex, values_from = count)
+gender_edu |> gt() |>
+  tab_header(title = "Number of men and women in each education levels") |>
+  cols_label(
+    education = "Education levels",
+    female = "Number of female", 
+    male = "Number of male"
+  )
 #Visualization of Age Distribution
 ggplot(merged_data, aes(x = education, y = age, fill = sex)) +
   geom_boxplot() +
@@ -171,11 +189,11 @@ ggplot(merged_data, aes(x = education, y = age, fill = sex)) +
   theme_minimal() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 ```
-
-```{r}
+The table shows there are more female in the higher education group, more male have a high school equivalent background. This box-plot shows the age distribution of men and women in three different education levels. As a result, younger people appear to have a higher education level (more than high school), the middle age group have relevant lower education.
+```{r message=FALSE, warning=FALSE}
 new_merged <- merged_data |>
   mutate(
-    total_activity = rowSums(across(min1:min45), na.rm = TRUE)
+    total_activity = rowSums(across(min1:min1440), na.rm = TRUE)
     )
 ggplot(new_merged, aes(x = age, y = total_activity, color = sex)) +
   geom_point(alpha = .5) +
@@ -183,13 +201,21 @@ ggplot(new_merged, aes(x = age, y = total_activity, color = sex)) +
   geom_smooth() +
   labs(title = "Total Activity by Age, Gender, and Education")
 ```
-
+This panel plot contains values of total activities as y-axis, and ages as x-axis, It separates into three sub-plots by education levels to compare men to women and their activities. As a result, there is a clear relationship between age and activities, as people being older (around 60), their have less activities. The group with higher education level apparent to have more activities and a gently line.    
 ```{r}
 activity_data <- merged_data |>
-  pivot_longer(cols = starts_with("min"), names_to = "minute", values_to = "activity")
-ggplot(activity_data, aes(x = minute, y = activity, color = sex)) +
+  group_by(education, sex)|>
+  summarise(across(starts_with("min"), ~ mean(.), .names = "mean_{.col}")) |>
+  pivot_longer(cols = starts_with("mean_"), names_to = "time", values_to = "mean")|>
+  mutate(
+    time = substring(time, 9),
+    time = as.numeric(time)
+  )
+ggplot(activity_data, aes(x = time, y = mean, color = sex)) +
   geom_line() +
-  facet_wrap(~education) +
-  labs(title = "24-Hour Activity by Education and Gender")
+  facet_grid(. ~education) +
+  labs(title = "24-Hour Activity by Education and Gender", 
+       x = "Time in mins",
+       y = "Mean value of activity")
 ```
-
+This three-panel plot shows the 24-hour activity time courses for three education levels, and to find the relationship with gender. As a result, in all three panels, female always have a higher mean value of activity than male, the "less than high school" group shows a relevant high mean value of activity than other education level groups. 

@@ -92,12 +92,12 @@ states_observed <- cleaned_brfss |>
 #in 2002
 states_2002 <- filter(states_observed, year == 2002) 
 kable(states_2002, 
-      caption = "States that observed at 7 or more locations in 2002", 
+      title = "States that observed at 7 or more locations in 2002", 
       col.names = c("Year", "State", "Locations Count"))
 #in 2010
 states_2010 <- filter(states_observed, year == 2010)
 kable(states_2010, 
-      caption = "States that observed at 7 or more locations in 2010", 
+      title = "States that observed at 7 or more locations in 2010", 
       col.names = c("Year", "State", "Locations Count"))
 ```
 In 2002, PA, MA, NJ, CT, FL, NC (total of 6 states) were observed at 7 or more locations. In 2010, total of 14 states were observed at 7 or more locations, including FL, NJ, TX, CA, MD, NC, NE, WA, MA, NY, OH, CO, PA, SC. 
@@ -157,7 +157,7 @@ gender_edu <- merged_data |>
   summarise(count = n(), .groups = "drop") |>
   pivot_wider(names_from = sex, values_from = count)
 kable(gender_edu, 
-      caption = "Number of men and women in each education levels",
+      title = "Number of men and women in each education levels",
       col.names = c("Education Level", "Number of Female", "Number of Male"))
 #Visualization of Age Distribution
 ggplot(merged_data, aes(x = education, y = age, fill = sex)) +
@@ -184,7 +184,7 @@ This panel plot contains values of total activities as y-axis, and ages as x-axi
 ```{r}
 activity_data <- merged_data |>
   group_by(education, sex)|>
-  summarise(across(starts_with("min"), ~ mean(.), .names = "mean_{.col}")) |>
+  summarise(across(starts_with("min"), ~ mean(.), .names = "mean_{.col}"), .groups = "drop") |>
   pivot_longer(cols = starts_with("mean_"), names_to = "time", values_to = "mean")|>
   mutate(
     time = substring(time, 9),

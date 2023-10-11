@@ -12,6 +12,7 @@ library(ggplot2)
 library(dplyr)
 library(knitr)
 library(gt)
+library(webshot)
 ```
 
 ### Problem 1
@@ -45,7 +46,7 @@ This plot displays the number of items ordered in each aisle that with more than
 selected_aisles <- instacart |>
   filter(aisle==c("baking ingredients", "dog food care", "packaged vegetables fruits")) |>
   group_by(aisle, product_name) |>
-  summarise(order_count = n()) |>
+  summarise(order_count = n(), .groups = "drop") |>
   arrange(aisle, -order_count) |>
   slice_head(n = 3)
 selected_aisles |> gt() |>
